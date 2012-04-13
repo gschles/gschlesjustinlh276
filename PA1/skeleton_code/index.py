@@ -4,6 +4,8 @@ import os, glob, os.path
 import sys
 import re
 
+# I just want something to commit on git...
+
 if len(sys.argv) != 3:
   print >> sys.stderr, 'usage: python index.py data_dir output_dir' 
   os._exit(-1)
