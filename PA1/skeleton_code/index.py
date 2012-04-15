@@ -34,7 +34,7 @@ def print_posting(file, posting_line):
     # a useful function is f.tell(), which gives you the offset from beginning of file
     # you may also want to consider storing the file position and doc frequency in posting_dict in this call
     line = re.split('\s', posting_line.strip())
-    word_id = line[0]
+    word_id = int(line[0])
     count = len(line) - 1
     posting_dict[word_id] = (file.tell(), count)
     file.write(posting_line)
