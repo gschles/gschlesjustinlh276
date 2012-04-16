@@ -9,10 +9,24 @@ if len(sys.argv) != 2:
     os._exit(-1)
 
 def merge_posting (postings1, postings2):
-    new_posting = []
+    new_posting = ''
     # provide implementation for merging two postings lists
-    
-    return new_posting
+    p1 = re.split('\s', postings1.strip())
+    p2 = re.split('\s', postings2.strip())
+    i = 0
+    j = 0
+    while True:
+        if i >= len(p1) or j >= len(p2):
+            break
+        if p1[i] == p2[j]:
+            new_posting += p1[i] + ' '
+            i += 1
+            j += 1
+        elif p2[j] < p1[i]:
+              j += 1
+        else:
+            i += 1             
+    return new_posting.strip()
 
 # file locate of all the index related files
 index_dir = sys.argv[1]
@@ -51,6 +65,7 @@ def read_posting(term_id):
     file_pos = file_pos_dict[term_id]
     index_f.seek(file_pos)
     posting_list = index_f.readline()
+    posting_list = posting_list[posting_list.find(' ')+1:]
     return posting_list
 
 # read query from stdin
@@ -64,8 +79,31 @@ while True:
     # don't forget to handle the case where query contains unseen words
     # next retrieve the postings list of each query term, and merge the posting lists
     # to produce the final result
+    #print >> sys.stderr, input_parts
+    word_ids = []
+    for term in input_parts:
+        if term in word_dict:
+            word_id = word_dict[term]
+            word_ids.append((word_id, doc_freq_dict[word_id]))
+        else:
+            print 'no results found'
+            os._exit(0)
+    word_ids = sorted(word_ids, key=lambda word_id: word_id[1])
     
-    # posting = read_posting(word_id)
-    
+    posting = read_posting(word_ids[0][0])
+    for i in range(1,len(word_ids)):
+        next_posting = read_posting(word_ids[i][0])
+        posting = merge_posting(posting, next_posting)
+    if posting == '':
+        print 'no results found'
+    else:
+        doc_ids = re.split('\s', posting.strip())
+        docs = []
+        for d in doc_ids:
+            docs.append(doc_id_dict[int(d)])
+        docs.sort()
+        for d in docs:
+            print d
+        
     # don't forget to convert doc_id back to doc_name, and sort in lexicographical order
     # before printing out to stdout
