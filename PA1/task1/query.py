@@ -18,11 +18,11 @@ def merge_posting (postings1, postings2):
     while True:
         if i >= len(p1) or j >= len(p2):
             break
-        if p1[i] == p2[j]:
+        if int(p1[i]) == int(p2[j]):
             new_posting += p1[i] + ' '
             i += 1
             j += 1
-        elif p2[j] < p1[i]:
+        elif int(p2[j]) < int(p1[i]):
               j += 1
         else:
             i += 1             

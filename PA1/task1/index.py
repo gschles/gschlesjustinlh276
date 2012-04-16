@@ -61,11 +61,11 @@ def merge_posting (line1, line2):
         elif w2 is None:
             merge += w1 + ' '
             w1 = pop_left_or_none(l1)
-        elif w1 == w2:
+        elif int(w1) == int(w2):
             merge += w1 + ' '
             w1 = pop_left_or_none(l1)
             w2 = pop_left_or_none(l2)
-        elif w1 < w2:
+        elif int(w1) < int(w2):
             merge += w1 + ' '
             w1 = pop_left_or_none(l1)
         else:
