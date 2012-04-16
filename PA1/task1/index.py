@@ -110,7 +110,7 @@ for dir in sorted(os.listdir(root)):
     # (you need to provide implementation)
     print >> sys.stderr, 'print posting list to disc for dir:' + dir
     # write the posting lists to block_pl for this current block
-    for term in term_doc_dict:
+    for term in sorted(term_doc_dict.keys()):
         line = str(term) + ' '
         docs = sorted(list(term_doc_dict[term]))
         for doc in docs:
@@ -136,22 +136,31 @@ while True:
     # (provide implementation merging the two blocks of posting lists)
     l1 = b1_f.readline()
     l2 = b2_f.readline()
-    while l1 != '' and l2 != '':
-        line1 = re.split('\s', l1.strip())
-        line2 = re.split('\s', l2.strip())
-        wid1 = int(line1[0])
-        wid2 = int(line2[0])
-        if wid1 == wid2:
-            merge = merge_posting(line1, line2)
-            print_posting(comb_f, merge)
-            l1 = b1_f.readline()
+    while True:
+        if l1 == '' and l2 == '':
+            break
+        if l1 == '':
+            print_posting(comb_f, l2)
             l2 = b2_f.readline()
-        elif wid1 < wid2:
+        elif l2 == '':
             print_posting(comb_f, l1)
             l1 = b1_f.readline()
         else:
-            print_posting(comb_f, l2)
-            l2 = b2_f.readline()
+            line1 = re.split('\s', l1.strip())
+            line2 = re.split('\s', l2.strip())
+            wid1 = int(line1[0])
+            wid2 = int(line2[0])
+            if wid1 == wid2:
+                merge = merge_posting(line1, line2)
+                print_posting(comb_f, merge)
+                l1 = b1_f.readline()
+                l2 = b2_f.readline()
+            elif wid1 < wid2:
+                print_posting(comb_f, l1)
+                l1 = b1_f.readline()
+            else:
+                print_posting(comb_f, l2)
+                l2 = b2_f.readline()
     # write the new merged posting lists block to file 'comb_f'
     b1_f.close()
     b2_f.close()
