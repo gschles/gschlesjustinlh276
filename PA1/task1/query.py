@@ -23,7 +23,7 @@ def merge_posting (postings1, postings2):
             i += 1
             j += 1
         elif int(p2[j]) < int(p1[i]):
-              j += 1
+            j += 1
         else:
             i += 1             
     return new_posting.strip()
@@ -57,6 +57,7 @@ for line in posting_dict_f.readlines():
     file_pos_dict[term_id] = file_pos
     doc_freq_dict[term_id] = doc_freq
 
+
 def read_posting(term_id):
     # provide implementation for posting list lookup for a given term
     # a useful function to use is index_f.seek(file_pos), which does a disc seek to 
@@ -88,7 +89,7 @@ while True:
         else:
             print 'no results found'
             os._exit(0)
-    word_ids = sorted(word_ids, key=lambda word_id: word_id[1])
+    word_ids = sorted(word_ids, key=lambda w: w[1])
     
     posting = read_posting(word_ids[0][0])
     for i in range(1,len(word_ids)):
