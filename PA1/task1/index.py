@@ -87,6 +87,7 @@ for dir in sorted(os.listdir(root)):
     term_doc_list = []
     term_doc_dict = {}
     for f in sorted(os.listdir(dir_name)):
+        if str(f) != '.DS_Store':
         count_file()
         file_id = os.path.join(dir, f)
         doc_id += 1
