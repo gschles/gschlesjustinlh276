@@ -34,17 +34,23 @@ def from_gaps(arr):
 
   
 def read_compressed_posting(file):
-    line = []
+    line = array('B')
     currbyte = array('B')
     try:
         currbyte.fromfile(file, 1)
     except EOFError:
         return line
-    currint = vb_decode(currbyte)
-    while (currbyte.pop() != 0):
-        line.append(currint.pop())
-        currbyte.fromfile(file, 1)
-        currint = vb_decode(currbyte)
+    while True:
+        if currbyte.count(0) == 1:
+            currbyte.fromfile(file,1)
+            if currbyte.count(0) == 2:
+                currbyte.fromfile(file,1)
+                if currbyte.count(0) == 3:
+                    break
+        line.extend(currbyte)
+        currbyte = array('B')
+        currbyte.fromfile(file,1)  
+    line = vb_decode(line)             
     gaps = from_gaps(line[1:])
     gaps.insert(0, line[0]) #worry this is slow operation
     return gaps
