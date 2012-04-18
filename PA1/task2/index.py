@@ -43,8 +43,6 @@ def vb_encode(arr):
   for num in arr:
     bytes = vb_encode_num(num)
     bytestream.extend(bytes)
-  if(bytestream.count(0) >= 2):
-      print 'fuck'
   bytestream.append(0);
   bytestream.append(0);
   bytestream.append(0); # byte 00000000 never occurs naturally, can be used as a separator
