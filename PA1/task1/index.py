@@ -87,7 +87,6 @@ for dir in sorted(os.listdir(root)):
     # append block names to a queue, later used in merging
     block_q.append(dir)
     block_pl = open(block_pl_name, 'w')
-    term_doc_list = []
     term_doc_dict = {}
     for f in sorted(os.listdir(dir_name)):
         if str(f) != '.DS_Store':
@@ -105,12 +104,10 @@ for dir in sorted(os.listdir(root)):
                     word_id += 1
                 if word_dict[token] not in term_doc_dict:
                     term_doc_dict[word_dict[token]] = set([])
-                term_doc_list.append( (word_dict[token], doc_id) )
                 term_doc_dict[word_dict[token]].add(doc_id)
           file.close() #close the file
     print >> sys.stderr, 'sorting term doc list for dir:' + dir
     # sort term doc list
-    term_doc_list.sort() # sorts by first tuple item, then second
     # (you need to provide implementation)
     print >> sys.stderr, 'print posting list to disc for dir:' + dir
     # write the posting lists to block_pl for this current block
