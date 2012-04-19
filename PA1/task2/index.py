@@ -4,6 +4,9 @@ import os, glob, os.path
 import sys
 import re
 from array import array
+import time
+
+time_start = time.clock()
 
 if len(sys.argv) != 3:
     print >> sys.stderr, 'usage: python index.py data_dir output_dir' 
@@ -275,3 +278,5 @@ word_dict_f.close()
 posting_dict_f.close()
 
 print total_file_count
+time_end = time.clock()
+print >> sys.stderr, time_start, time_end, time_end-time_start  

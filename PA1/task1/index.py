@@ -3,6 +3,9 @@ from collections import deque
 import os, glob, os.path
 import sys
 import re
+import time
+
+time_start = time.clock()
 
 if len(sys.argv) != 3:
     print >> sys.stderr, 'usage: python index.py data_dir output_dir' 
@@ -88,13 +91,13 @@ for dir in sorted(os.listdir(root)):
     term_doc_dict = {}
     for f in sorted(os.listdir(dir_name)):
         if str(f) != '.DS_Store':
-        count_file()
-        file_id = os.path.join(dir, f)
-        doc_id += 1
-        doc_id_dict[file_id] = doc_id
-        fullpath = os.path.join(dir_name, f)
-        file = open(fullpath, 'r')
-        for line in file.readlines():
+          count_file()
+          file_id = os.path.join(dir, f)
+          doc_id += 1
+          doc_id_dict[file_id] = doc_id
+          fullpath = os.path.join(dir_name, f)
+          file = open(fullpath, 'r')
+          for line in file.readlines():
             tokens = line.strip().split()
             for token in tokens:
                 if token not in word_dict:
@@ -104,7 +107,7 @@ for dir in sorted(os.listdir(root)):
                     term_doc_dict[word_dict[token]] = set([])
                 term_doc_list.append( (word_dict[token], doc_id) )
                 term_doc_dict[word_dict[token]].add(doc_id)
-        file.close() #close the file
+          file.close() #close the file
     print >> sys.stderr, 'sorting term doc list for dir:' + dir
     # sort term doc list
     term_doc_list.sort() # sorts by first tuple item, then second
@@ -188,3 +191,5 @@ word_dict_f.close()
 posting_dict_f.close()
 
 print total_file_count
+time_end = time.clock()
+print >> sys.stderr, time_start, time_end, time_end-time_start
