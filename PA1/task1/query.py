@@ -92,7 +92,7 @@ while True:
             word_ids.append((word_id, doc_freq_dict[word_id]))
         else:
             print 'no results found'
-            os._exit(0)
+            sys.exit(0)
     word_ids = sorted(word_ids, key=lambda w: w[1])
     
     posting = read_posting(word_ids[0][0])
