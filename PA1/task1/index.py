@@ -88,23 +88,23 @@ for dir in sorted(os.listdir(root)):
     term_doc_dict = {}
     for f in sorted(os.listdir(dir_name)):
         if str(f) != '.DS_Store':
-        count_file()
-        file_id = os.path.join(dir, f)
-        doc_id += 1
-        doc_id_dict[file_id] = doc_id
-        fullpath = os.path.join(dir_name, f)
-        file = open(fullpath, 'r')
-        for line in file.readlines():
-            tokens = line.strip().split()
-            for token in tokens:
-                if token not in word_dict:
-                    word_dict[token] = word_id
-                    word_id += 1
-                if word_dict[token] not in term_doc_dict:
-                    term_doc_dict[word_dict[token]] = set([])
-                term_doc_list.append( (word_dict[token], doc_id) )
-                term_doc_dict[word_dict[token]].add(doc_id)
-        file.close() #close the file
+            count_file()
+            file_id = os.path.join(dir, f)
+            doc_id += 1
+            doc_id_dict[file_id] = doc_id
+            fullpath = os.path.join(dir_name, f)
+            file = open(fullpath, 'r')
+            for line in file.readlines():
+                tokens = line.strip().split()
+                for token in tokens:
+                    if token not in word_dict:
+                        word_dict[token] = word_id
+                        word_id += 1
+                    if word_dict[token] not in term_doc_dict:
+                        term_doc_dict[word_dict[token]] = set([])
+                    term_doc_list.append( (word_dict[token], doc_id) )
+                    term_doc_dict[word_dict[token]].add(doc_id)
+            file.close() #close the file
     print >> sys.stderr, 'sorting term doc list for dir:' + dir
     # sort term doc list
     term_doc_list.sort() # sorts by first tuple item, then second
