@@ -4,6 +4,10 @@ import os, glob, os.path
 import sys
 import re
 
+import time
+
+time_start = time.clock()
+
 if len(sys.argv) != 2:
     print >> sys.stderr, 'usage: python query.py index_dir' 
     os._exit(-1)
@@ -105,6 +109,9 @@ while True:
         docs.sort()
         for d in docs:
             print d
-        
+
+time_end = time.clock()
+print >> sys.stderr, time_start, time_end, time_end-time_start
+
     # don't forget to convert doc_id back to doc_name, and sort in lexicographical order
     # before printing out to stdout
