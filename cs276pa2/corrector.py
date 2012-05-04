@@ -136,10 +136,10 @@ def find_uniform_correction(query):
 	#delete all queries containing invalid words
 	candidate_queries = set(q for q in candidate_queries if is_valid_query(q))
 	max_query = ""
-	max_query_prob = 0
+	max_query_prob = None
 	for curr_query in candidate_queries:
-		#print curr_query
 		curr_query_prob = uniform_query_prob(query, curr_query)
+		#print curr_query, curr_query_prob
 		if curr_query_prob > max_query_prob:
 			max_query = curr_query
 			max_query_prob = curr_query_prob
@@ -183,7 +183,7 @@ def main(argv):
 	print >> sys.stdout, result
   
 if __name__ == '__main__':
-  print(sys.argv)
+  #print(sys.argv)
   main(sys.argv)
   
 def compute_edit_type(incor, cor):
