@@ -14,8 +14,8 @@ queries_loc = 'data/queries.txt'
 gold_loc = 'data/gold.txt'
 google_loc = 'data/google.txt'
 
-unigram_file = 'unigram'
-bigram_file = 'bigram'
+unigram_file = 'unigrams'
+bigram_file = 'bigrams'
 del_file = 'del'
 ins_file = 'ins'
 sub_file = 'sub'
@@ -59,10 +59,10 @@ def uni_cost_prob(r, q, dist):
     return math.pow(uni_prob, dist)
 
 def unigram_prob(string):
-  return unigram_counts[string]/term_count
+  return float(unigram_counts[string])/term_count
 
 def bigram_prob(w1, w2):
-  return bigram_counts[(w1, w2)]/unigram_counts[w1]
+  return float(bigram_counts[(w1, w2)])/unigram_counts[w1]
 
 def interp_prob(w1, w2):
   if w1 is None:
@@ -84,6 +84,8 @@ def read_models():
   reads in unigram and bigram counts stored from buildmodels.sh
   reads in empircal edit cost dictionaries stored from buildmodels.sh
   """
+  global unigram_counts, bigram_counts, term_count, del_dic, ins_dic, sub_dic, tras_dic, count_dic
+
   unigram = open(unigram_file, 'rb')
   bigram = open(bigram_file, 'rb')
   delete = open(del_file, 'rb')
@@ -116,18 +118,18 @@ def edits2(string):
 
 def is_valid_query(query):
 	words = query.split()
-	for word in words
-		if word not in unigram_counts
+	for word in words:
+		if word not in unigram_counts:
 			return False
 	return True
 
 def uniform_query_prob(query,candidate_query):
 	#TODO: differentiate between 1 and 2 edits
-	query_prob = query_prob(candidate_query)
-	if query == candidate_query
-		return query_prob * equal_prob
-	else
-		return query_prob * edit_prob
+	q_prob = query_prob(candidate_query)
+	if query == candidate_query:
+		return q_prob * equal_prob
+	else:
+		return q_prob * edit_prob
 	
 def find_uniform_correction(query):
 	candidate_queries = edits1(query) or edits2(query)
@@ -135,9 +137,10 @@ def find_uniform_correction(query):
 	candidate_queries = set(q for q in candidate_queries if is_valid_query(q))
 	max_query = ""
 	max_query_prob = 0
-	for curr_query in candidate_queries
+	for curr_query in candidate_queries:
+		#print curr_query
 		curr_query_prob = uniform_query_prob(query, curr_query)
-		if curr_query_prob > max_query_prob
+		if curr_query_prob > max_query_prob:
 			max_query = curr_query
 			max_query_prob = curr_query_prob
 	return max_query
@@ -146,15 +149,15 @@ def empirical_query_prob(query, candidate_query):
 	query_prob = query_prob(candidate_query)
 	(edit_type, edit_arg) = compute_edit_type(query, candidate_query)
 	
-	if edit_type = 'ins'
+	if edit_type == 'ins':
 		return query_prob * (ins_dict(edit_arg)/count_dict(edit_arg))
-	elif edit_type = 'sub'
+	elif edit_type == 'sub':
 		return query_prob * (sub_dict(edit_arg)/count_dict(edit_arg))
-	elif edit_type = 'del'
+	elif edit_type == 'del':
 		return query_prob * (del_dict(edit_arg)/count_dict(edit_arg))
-	elif edit_type = 'trans'
+	elif edit_type == 'trans':
 		return query_prob * (trans_dict(edit_arg)/count_dict(edit_arg))
-	else
+	else:
 		return 0
 	
 def find_empirical_correction(query):
@@ -166,15 +169,16 @@ def find_empirical_correction(query):
 	
 
 def main(argv):
-  prob_type = argv[1]
+  prob_type = argv[2]
   read_models() # retrieve the language models
   (queries, gold, google) = read_query_data()
   
-  for query in queries
+  for query in queries:
+	query = query.strip()
   	result = ''
-  	if prob_type == uniform_prob
+  	if prob_type == uniform_prob:
   		result = find_uniform_correction(query)
-  	elif prob_type == empirical_prob
+  	elif prob_type == empirical_prob:
 		result = find_empirical_correction(query)
 	print >> sys.stdout, result
   

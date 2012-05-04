@@ -144,7 +144,7 @@ class EmpiricalModel:
     cPickle.dump(dict(self.count_dic), count_file)
 
 def main(argv):
-  #scan_corpus(argv[1]) #uncomment after empirical edits are done
+  scan_corpus(argv[1]) #uncomment after empirical edits are done
   emp_model = EmpiricalModel()
   emp_model.read_edit1s(argv[2])
   emp_model.build_empirical_model()
