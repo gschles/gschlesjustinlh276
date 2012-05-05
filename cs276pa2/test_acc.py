@@ -10,4 +10,6 @@ for pair in itertools.izip(f1.readlines(), f2.readlines()):
   total += 1
   if pair[0] == pair[1]:
     right += 1
-print right, total, "acc = ", 100*float(right)/total
+  else:
+    print pair[0].strip()
+print >> sys.stderr, right, total, "acc = ", 100*float(right)/total

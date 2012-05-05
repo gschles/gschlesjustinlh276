@@ -10,6 +10,7 @@ edit_prob = 0.1
 equal_prob = 0.9
 
 queries_loc = 'data/queries.txt'
+#queries_loc = 'wrong'
 gold_loc = 'data/gold.txt'
 google_loc = 'data/google.txt'
 
@@ -116,6 +117,9 @@ def edits2(string):
     return set(e2 for e1 in edits1(string) for e2 in edits1(e1) )
 
 def is_valid_query(query):
+    if query.find('  ') >= 0:
+        return False
+
     words = query.split()
     for word in words:
         if word not in unigram_counts:
@@ -130,10 +134,10 @@ def uniform_query_prob(query,candidate_query,edits):
         return q_prob + math.log(math.pow(edit_prob, edits))
 
 def find_uniform_correction(query):
-    candidate_edit1_queries = edits1(query) 
-    candidate_edit2_queries = edits2(query)
-    candidate_edit1_queries = set(q for q in candidate_edit1_queries if is_valid_query(q))
-    candidate_edit2_queries = set(q for q in candidate_edit2_queries if is_valid_query(q))
+    if is_valid_query(query):
+      return query
+    candidate_edit1_queries = edits1(query)
+    candidate_edit1_queries = set(q for q in candidate_edit1_queries if is_valid_query(q)) 
     max_query = ""
     max_query_prob = None
     for curr_query in candidate_edit1_queries:
@@ -141,6 +145,10 @@ def find_uniform_correction(query):
         if curr_query_prob > max_query_prob:
             max_query = curr_query
             max_query_prob = curr_query_prob
+    if max_query != '':
+	return max_query
+    candidate_edit2_queries = edits2(query)
+    candidate_edit2_queries = set(q for q in candidate_edit2_queries if is_valid_query(q))
     for curr_query in candidate_edit2_queries:
         curr_query_prob = uniform_query_prob(query, curr_query,2)
         if curr_query_prob > max_query_prob:
