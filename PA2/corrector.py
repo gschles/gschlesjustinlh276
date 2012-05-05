@@ -163,7 +163,6 @@ def empirical_query_prob(query, candidate_query):
         return 0
     
 def find_empirical_edit1_correction(original_query,candidate_queries,edit1_query_probabilities):
-    candidate_queries = set(q for q in candidate_queries if is_valid_query(q))
     max_query = ""
     max_query_prob = None
     for curr_query in candidate_queries:
@@ -178,10 +177,12 @@ def find_empirical_edit1_correction(original_query,candidate_queries,edit1_query
 # calculates the
 def find_empirical_correction(original_query):
     candidate_edit1_queries = edits1(original_query)
+    candidtate_edit1_queries = set(q for q in candidate_edit1_queries if is_valid_query(q))
     edit1_query_probabilities = {}
     (max_query, max_query_prob) = find_empirical_edit1_correction(original_query,candidate_edit1_queries, edit1_query_probabilities) 
     for curr_edit1_query in candidate_edit1_queries:
         candidate_edit2_queries = edits1(curr_edit1_query)
+        candidtate_edit2_queries = set(q for q in candidate_edit2_queries if is_valid_query(q))
         (max_edit2_query, max_edit2_query_prob) = find_empirical_edit1_correction(curr_edit1_query,candidate_edit2_queries)
         total_max_edit2_query_prob = max_edit2_query_prob * edit1_query_probabilities[curr_edit1_query]
         if total_max_edit2_query_prob > max_query_prob:
