@@ -1,4 +1,3 @@
-
 import sys
 import os.path
 import gzip
@@ -150,6 +149,9 @@ def main(argv):
   emp_model.build_empirical_model()
   print >> sys.stderr, 'constructed empirical cost model... writing to file'
   emp_model.write_model_to_files()
+   
 
 if __name__ == '__main__':
   main(sys.argv)
+   
+   

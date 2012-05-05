@@ -1,4 +1,3 @@
-
 import sys, math
 from collections import Counter
 import cPickle
@@ -56,7 +55,7 @@ def uni_cost_prob(r, q, dist):
   if q == r:
     return equal_prob
   else:
-    return math.pow(uni_prob, dist)
+    return math.pow(edit_prob, dist)
 
 def unigram_prob(string):
   return float(unigram_counts[string])/term_count
@@ -117,73 +116,97 @@ def edits2(string):
     return set(e2 for e1 in edits1(string) for e2 in edits1(e1) )
 
 def is_valid_query(query):
-	words = query.split()
-	for word in words:
-		if word not in unigram_counts:
-			return False
-	return True
+    words = query.split()
+    for word in words:
+        if word not in unigram_counts:
+            return False
+    return True
 
-def uniform_query_prob(query,candidate_query):
-	#TODO: differentiate between 1 and 2 edits
-	q_prob = query_prob(candidate_query)
-	if query == candidate_query:
-		return q_prob * equal_prob
-	else:
-		return q_prob * edit_prob
-	
+def uniform_query_prob(query,candidate_query,edits):
+    q_prob = query_prob(candidate_query)
+    if query == candidate_query:
+        return q_prob + math.log(equal_prob)
+    else:
+        return q_prob + math.log(math.pow(edit_prob, edits))
+
 def find_uniform_correction(query):
-	candidate_queries = edits1(query) or edits2(query)
-	#delete all queries containing invalid words
-	candidate_queries = set(q for q in candidate_queries if is_valid_query(q))
-	max_query = ""
-	max_query_prob = None
-	for curr_query in candidate_queries:
-		curr_query_prob = uniform_query_prob(query, curr_query)
-		#print curr_query, curr_query_prob
-		if curr_query_prob > max_query_prob:
-			max_query = curr_query
-			max_query_prob = curr_query_prob
-	return max_query
-	
-def empirical_query_prob(query, candidate_query):
-	query_prob = query_prob(candidate_query)
-	(edit_type, edit_arg) = compute_edit_type(query, candidate_query)
-	
-	if edit_type == 'ins':
-		return query_prob * (ins_dict(edit_arg)/count_dict(edit_arg))
-	elif edit_type == 'sub':
-		return query_prob * (sub_dict(edit_arg)/count_dict(edit_arg))
-	elif edit_type == 'del':
-		return query_prob * (del_dict(edit_arg)/count_dict(edit_arg))
-	elif edit_type == 'trans':
-		return query_prob * (trans_dict(edit_arg)/count_dict(edit_arg))
-	else:
-		return 0
-	
-def find_empirical_correction(query):
-	candidate_edit1_queries = edits1(query)
-	candidate_edit2_queries = edits2(query)
-	#TODO: Generate all queries 1 to 2 edits away, storing edits
-	#TODO: Write function to return query probability given edits
-	#TODO: Incorporate additional simple heuristics to trim candidate sizes
-	
+    candidate_edit1_queries = edits1(query) 
+    candidate_edit2_queries = edits2(query)
+    candidate_edit1_queries = set(q for q in candidate_edit1_queries if is_valid_query(q))
+    candidate_edit2_queries = set(q for q in candidate_edit2_queries if is_valid_query(q))
+    max_query = ""
+    max_query_prob = None
+    for curr_query in candidate_edit1_queries:
+        curr_query_prob = uniform_query_prob(query, curr_query,1)
+        if curr_query_prob > max_query_prob:
+            max_query = curr_query
+            max_query_prob = curr_query_prob
+    for curr_query in candidate_edit2_queries:
+        curr_query_prob = uniform_query_prob(query, curr_query,2)
+        if curr_query_prob > max_query_prob:
+            max_query = curr_query
+            max_query_prob = curr_query_prob
+    return max_query
 
+def empirical_query_prob(query, candidate_query):
+    query_prob = query_prob(candidate_query)
+    (edit_type, edit_arg) = compute_edit_type(query, candidate_query)
+    if edit_type == 'ins':
+        return query_prob * (ins_dic(edit_arg)/count_dic(edit_arg))
+    elif edit_type == 'sub':
+        return query_prob * (sub_dic(edit_arg)/count_dic(edit_arg))
+    elif edit_type == 'del':
+        return query_prob * (del_dic(edit_arg)/count_dic(edit_arg))
+    elif edit_type == 'trans':
+        return query_prob * (trans_dic(edit_arg)/count_dic(edit_arg))
+    else:
+        return 0
+    
+def find_empirical_edit1_correction(original_query,candidate_queries,edit1_query_probabilities):
+    max_query = ""
+    max_query_prob = None
+    for curr_query in candidate_queries:
+        curr_query_prob = empirical_query_prob(original_query, curr_query)
+        if edit1_query_probabilities is not None:
+             edit1_query_probabilities[curr_query] = curr_query_prob   
+        if curr_query_prob > max_query_prob:
+            max_query = curr_query
+            max_query_prob = curr_query_prob
+    return (max_query, max_query_prob)
+
+# calculates the
+def find_empirical_correction(original_query):
+    candidate_edit1_queries = edits1(original_query)
+    candidtate_edit1_queries = set(q for q in candidate_edit1_queries if is_valid_query(q))
+    edit1_query_probabilities = {}
+    (max_query, max_query_prob) = find_empirical_edit1_correction(original_query,candidate_edit1_queries, edit1_query_probabilities) 
+    for curr_edit1_query in candidate_edit1_queries:
+        candidate_edit2_queries = edits1(curr_edit1_query)
+        candidtate_edit2_queries = set(q for q in candidate_edit2_queries if is_valid_query(q))
+        (max_edit2_query, max_edit2_query_prob) = find_empirical_edit1_correction(curr_edit1_query,candidate_edit2_queries)
+        total_max_edit2_query_prob = max_edit2_query_prob * edit1_query_probabilities[curr_edit1_query]
+        if total_max_edit2_query_prob > max_query_prob:
+            max_query = total_max_edit2_query_prob
+            max_query_prob = max_edit2_query_prob
+    return max_query
+   
 def main(argv):
   prob_type = argv[2]
   read_models() # retrieve the language models
   (queries, gold, google) = read_query_data()
   
   for query in queries:
-	query = query.strip()
-  	result = ''
-  	if prob_type == uniform_prob:
-  		result = find_uniform_correction(query)
-  	elif prob_type == empirical_prob:
-		result = find_empirical_correction(query)
-	print >> sys.stdout, result
+    query = query.strip()
+    result = ''
+    if prob_type == uniform_prob:
+        result = find_uniform_correction(query)
+    elif prob_type == empirical_prob:
+        result = find_empirical_correction(query)
+    if result == '':
+        result = query
+    print >> sys.stdout, result
   
 if __name__ == '__main__':
-  #print(sys.argv)
   main(sys.argv)
   
 def compute_edit_type(incor, cor):
@@ -232,4 +255,4 @@ def find_ins_arg(incor, cor):
     if ind == -1:
       return '$' + incor[0]
     else:
-      return incor[ind:ind+2]	
+      return incor[ind:ind+2]    
