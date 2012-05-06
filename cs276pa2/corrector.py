@@ -1,5 +1,5 @@
 import sys, math
-from collections import Counter
+from collections import Counter, defaultdict
 import cPickle
 from time import clock
 
@@ -28,11 +28,11 @@ count_file = 'count'
 
 unigram_counts = Counter()
 bigram_counts = Counter()
-del_dic = {}
-ins_dic = {}
-sub_dic = {}
-trans_dic ={}
-count_dic = {}
+del_dic = defaultdict(lambda:1)
+ins_dic = defaultdict(lambda:1)
+sub_dic = defaultdict(lambda:1)
+trans_dic =defaultdict(lambda:1)
+count_dic = defaultdict(lambda:0)
 term_count = 0
 
 alphabet = "abcdefghijklmnopqrstuvwxyz0123546789&$+_' "
@@ -121,14 +121,14 @@ def read_models():
   unigram_counts = cPickle.load(unigram)
   bigram_counts = cPickle.load(bigram)
   term_count = len(unigram_counts)
-  del_dic = cPickle.load(delete)
-  ins_dic = cPickle.load(insert)
-  sub_dic = cPickle.load(subs)
-  trans_dic = cPickle.load(trans)
-  count_dic = cPickle.load(count)
+  del_dic.update(cPickle.load(delete))
+  ins_dic.update(cPickle.load(insert))
+  sub_dic.update(cPickle.load(subs))
+  trans_dic.update(cPickle.load(trans))
+  count_dic.update(cPickle.load(count))
 
 
-alphabet = 'abcdefghijklmnopqrstuvwxyz \'-_$&'
+alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789 +\'-_$&'
 
 def edits1(string):
    splits     = [(string[:i], string[i:]) for i in range(len(string) + 1)]
@@ -186,15 +186,15 @@ def empirical_query_prob(query, candidate_query):
     q_prob = query_prob(candidate_query)
     (edit_type, edit_arg) = compute_edit_type(query, candidate_query)
     if edit_type == 'ins':
-        return q_prob * (float(ins_dic[edit_arg]+1)/(count_dic[edit_arg]+term_count))
+        return q_prob + math.log((float(ins_dic[edit_arg])/(count_dic[edit_arg]+len(alphabet))))
     elif edit_type == 'sub':
-        return q_prob * (float(sub_dic[edit_arg]+1)/(count_dic[edit_arg]+term_count))
+        return q_prob + math.log((float(sub_dic[edit_arg])/(count_dic[edit_arg]+len(alphabet))))
     elif edit_type == 'del':
-        return q_prob * (float(del_dic[edit_arg]+1)/(count_dic[edit_arg]+term_count))
+        return q_prob + math.log((float(del_dic[edit_arg])/(count_dic[edit_arg]+len(alphabet)*(len(alphabet)-1))))
     elif edit_type == 'trans':
-        return q_prob * (float(trans_dic[edit_arg]+1)/(count_dic[edit_arg]+term_count))
+        return q_prob + math.log((float(trans_dic[edit_arg])/(count_dic[edit_arg]+len(alphabet)*(len(alphabet)-1))))
     else:
-        return 0
+        return None
     
 def find_empirical_edit1_correction(original_query,candidate_queries,edit1_query_probabilities):
     max_query = ""
@@ -210,20 +210,28 @@ def find_empirical_edit1_correction(original_query,candidate_queries,edit1_query
 
 # calculates the
 def find_empirical_correction(original_query):
+    max_query_prob = None
+    max_query = ''
+    if is_valid_query(original_query):
+      max_query_prob = uniform_query_prob(original_query, original_query, 0)
+      max_query = original_query
     candidate_edit1_queries = edits1(original_query)
-    candidtate_edit1_queries = set(q for q in candidate_edit1_queries if is_valid_query(q))
+    candidate_edit1_queries = set(q for q in candidate_edit1_queries if is_valid_query(q))
     edit1_query_probabilities = {}
-    (max_query, max_query_prob) = find_empirical_edit1_correction(original_query,candidate_edit1_queries, edit1_query_probabilities)
-    """
+    (max_query1, max_query_prob1) = find_empirical_edit1_correction(original_query,candidate_edit1_queries, edit1_query_probabilities)
+    if max_query_prob1 > max_query_prob:
+      max_query_prob = max_query_prob1
+      max_query = max_query1
+    if max_query != '':
+      return max_query
     for curr_edit1_query in candidate_edit1_queries:
         candidate_edit2_queries = edits1(curr_edit1_query)
         candidtate_edit2_queries = set(q for q in candidate_edit2_queries if is_valid_query(q))
         (max_edit2_query, max_edit2_query_prob) = find_empirical_edit1_correction(curr_edit1_query,candidate_edit2_queries)
-        total_max_edit2_query_prob = max_edit2_query_prob * edit1_query_probabilities[curr_edit1_query]
+        total_max_edit2_query_prob = max_edit2_query_prob + edit1_query_probabilities[curr_edit1_query]
         if total_max_edit2_query_prob > max_query_prob:
             max_query = total_max_edit2_query_prob
             max_query_prob = max_edit2_query_prob
-    """
     return max_query
    
 def compute_edit_type(incor, cor):
@@ -296,7 +304,7 @@ def main(argv):
     if result == '':
         result = query
     print >> sys.stdout, result
-  end = clock
+  end = clock()
   print >> sys.stderr, str(end-start)
   
 if __name__ == '__main__':
