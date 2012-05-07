@@ -130,6 +130,17 @@ def read_models():
 
 alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789 +\'-_$&'
 
+#returns list of tuples of form ("query","edit_type","edit_arg")
+def empirical_edits1(string):
+   splits     = [(string[:i], string[i:]) for i in range(len(string) + 1)]
+   deletes    = [(a + b[1:],'del',a[-1] + b[0]) for a, b in splits if a and b]
+   deletes1   = [(b[1:],'del','$' + b[0]) for a, b in splits if not a and b]
+   transposes = [(a + b[1] + b[0] + b[2:],'trans',b[0] + b[1]) for a, b in splits if len(b)>1]
+   replaces   = [(a + c + b[1:],'sub',b[0] + c) for a, b in splits for c in alphabet if b]
+   inserts    = [(a + c + b,'ins',a[-1] + c)    for a, b in splits for c in alphabet if a]
+   inserts1   = [(c + b,'ins','$' + c)    for a, b in splits for c in alphabet if not a]
+   return deletes + deletes1 + transposes + replaces + inserts + inserts1
+
 def edits1(string):
    splits     = [(string[:i], string[i:]) for i in range(len(string) + 1)]
    deletes    = [a + b[1:] for a, b in splits if b]
@@ -182,29 +193,29 @@ def find_uniform_correction(query):
             max_query_prob = curr_query_prob
     return max_query
 
-def empirical_query_prob(query, candidate_query):
-    q_prob = query_prob(candidate_query)
-    (edit_type, edit_arg) = compute_edit_type(query, candidate_query)
+
+def empirical_edit_prob(candidate_query_tuple):
+    edit_type = candidate_query_tuple[1]
+    edit_arg = candidate_query_tuple[2]
     if edit_type == 'ins':
-        return q_prob + math.log((float(ins_dic[edit_arg])/(count_dic[edit_arg]+len(alphabet))))
+        return math.log((float(ins_dic[edit_arg])/(count_dic[edit_arg[0]]+len(alphabet))))
     elif edit_type == 'sub':
-        return q_prob + math.log((float(sub_dic[edit_arg])/(count_dic[edit_arg]+len(alphabet))))
+        return  math.log((float(sub_dic[edit_arg])/(count_dic[edit_arg[0]]+len(alphabet))))
     elif edit_type == 'del':
-        return q_prob + math.log((float(del_dic[edit_arg])/(count_dic[edit_arg]+len(alphabet)*(len(alphabet)-1))))
+        return math.log((float(del_dic[edit_arg])/(count_dic[edit_arg]+len(alphabet)*(len(alphabet)-1))))
     elif edit_type == 'trans':
-        return q_prob + math.log((float(trans_dic[edit_arg])/(count_dic[edit_arg]+len(alphabet)*(len(alphabet)-1))))
-    else:
-        return None
+        return math.log((float(trans_dic[edit_arg])/(count_dic[edit_arg]+len(alphabet)*(len(alphabet)-1))))
+
+def empirical_query_prob(candidate_query_tuple):
+    return  query_prob(candidate_query_tuple[0]) + empirical_edit_prob(candidate_query_tuple)
     
-def find_empirical_edit1_correction(original_query,candidate_queries,edit1_query_probabilities):
+def find_empirical_edit1_correction(candidate_query_tuples):
     max_query = ""
     max_query_prob = None
-    for curr_query in candidate_queries:
-        curr_query_prob = empirical_query_prob(original_query, curr_query)
-        if edit1_query_probabilities is not None:
-             edit1_query_probabilities[curr_query] = curr_query_prob   
+    for curr_query_tuple in candidate_query_tuples:
+        curr_query_prob = empirical_query_prob(curr_query_tuple)
         if curr_query_prob > max_query_prob:
-            max_query = curr_query
+            max_query = curr_query_tuple[0]
             max_query_prob = curr_query_prob
     return (max_query, max_query_prob)
 
@@ -212,76 +223,35 @@ def find_empirical_edit1_correction(original_query,candidate_queries,edit1_query
 def find_empirical_correction(original_query):
     max_query_prob = None
     max_query = ''
+    
+    #default max_query to uniform model
     if is_valid_query(original_query):
       max_query_prob = uniform_query_prob(original_query, original_query, 0)
       max_query = original_query
-    candidate_edit1_queries = edits1(original_query)
-    candidate_edit1_queries = set(q for q in candidate_edit1_queries if is_valid_query(q))
-    edit1_query_probabilities = {}
-    (max_query1, max_query_prob1) = find_empirical_edit1_correction(original_query,candidate_edit1_queries, edit1_query_probabilities)
+    
+    #check all queries one edit distance away for improvement on max_query_prob
+    candidate_edit1_query_tuples = empirical_edits1(original_query)
+    candidate_edit1_query_tuples_cleaned = [q for q in candidate_edit1_query_tuples if is_valid_query(q[0])]
+    (max_query1, max_query_prob1) = find_empirical_edit1_correction(candidate_edit1_query_tuples_cleaned)
     if max_query_prob1 > max_query_prob:
       max_query_prob = max_query_prob1
       max_query = max_query1
+
     if max_query != '':
       return max_query
-    for curr_edit1_query in candidate_edit1_queries:
-        candidate_edit2_queries = edits1(curr_edit1_query)
-        candidtate_edit2_queries = set(q for q in candidate_edit2_queries if is_valid_query(q))
-        (max_edit2_query, max_edit2_query_prob) = find_empirical_edit1_correction(curr_edit1_query,candidate_edit2_queries)
-        total_max_edit2_query_prob = max_edit2_query_prob + edit1_query_probabilities[curr_edit1_query]
-        if total_max_edit2_query_prob > max_query_prob:
-            max_query = total_max_edit2_query_prob
-            max_query_prob = max_edit2_query_prob
+    
+    #check all queries two edit distance away for improvement on max_query_prob
+    for curr_edit1_query_tuple in candidate_edit1_query_tuples:
+        candidate_edit2_query_tuples = empirical_edits1(curr_edit1_query_tuple[0])
+        candidate_edit2_query_tuples_cleaned = [q for q in candidate_edit2_query_tuples if is_valid_query(q[0])]
+        if candidate_edit2_query_tuples_cleaned != []:
+		(max_edit2_query, max_edit2_query_prob) = find_empirical_edit1_correction(candidate_edit2_query_tuples_cleaned)
+        	total_max_edit2_query_prob = max_edit2_query_prob + empirical_edit_prob(curr_edit1_query_tuple) 
+        	if total_max_edit2_query_prob > max_query_prob:
+            		max_query = max_edit2_query
+            		max_query_prob = max_edit2_query_prob
     return max_query
    
-def compute_edit_type(incor, cor):
-    edit_type = None
-    edit_arg = None
-    if len(incor) < len(cor):
-      edit_type = 'del'
-      edit_arg = find_del_arg(incor, cor)
-    elif len(incor) > len(cor):
-      edit_type = 'ins'
-      edit_arg = find_ins_arg(incor, cor)
-    else:
-      (edit_type, edit_arg) = compute_sub_trans(incor, cor)
-    return edit_type, edit_arg
-
-def compute_sub_trans(incor, cor):
-    edit_type = None
-    edit_arg = None
-    ind = find_discrep(incor, cor)
-    if ind == len(incor) - 1:
-      edit_type = 'sub'
-      edit_arg = incor[ind]+cor[ind]
-    elif incor[ind+1] == cor[ind+1]:
-      edit_type = 'sub'
-      edit_arg = incor[ind]+cor[ind]
-    else:
-      edit_type = 'trans'
-      edit_arg = cor[ind:ind+2]
-    return edit_type, edit_arg
-
-def find_discrep(incor, cor):
-    for i in range(0,min(len(incor), len(cor))):
-      if incor[i] != cor[i]:
-        return i
-    return max(len(incor), len(cor)) - 1
-
-def find_del_arg(incor, cor):
-    ind = find_discrep(incor, cor) - 1
-    if ind == -1:
-      return '$' + cor[0]
-    else:
-      return cor[ind:ind+2]
-   
-def find_ins_arg(incor, cor):
-    ind = find_discrep(incor, cor) - 1
-    if ind == -1:
-      return '$' + incor[0]
-    else:
-      return incor[ind:ind+2]    
-
 def main(argv):
   global stupid, laplace
   start = clock()
@@ -307,6 +277,7 @@ def main(argv):
   end = clock()
   print >> sys.stderr, str(end-start)
   
-if __name__ == '__main__':
-  main(sys.argv)
- 
+if __name__ == '__main__': main(sys.argv)
+
+
+
