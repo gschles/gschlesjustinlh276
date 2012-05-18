@@ -22,6 +22,9 @@ Lb = 0
 Lt = 0
 La = 0
 
+#Smallest Window
+B = 2.7
+
 norm_types = ('l1', 'sub', 'l1') # normalize title and anchor by L1, body by sublinear
 
 TrainingQueries = {}
@@ -114,11 +117,11 @@ def rank(query, task):
   print 'query: ' + query.get_query()
   rankings = []
   if task == 1:
-    rankings = rank_cosine(query, docs)
+    rankings = rank_cosine(query, docs, False)
   elif task == 2:
     rankings = rank_bm25(query, docs)
   elif task == 3:
-    print >> sys.stderr, 'to do: implement smallest window'
+    rankings = rank_cosine(query, docs, True)
   rankings.reverse()
   for r in rankings:
     print '\turl: ' + r[1]
@@ -148,9 +151,58 @@ def rank_bm25(query, docs):
 def cosine_similarity(u, v1, v2, v3):
   return sum([u[i]*(C1*v1[i] + C2*v2[i] + C3*v3[i]) for i in range(len(u))])
 
-def rank_cosine(query, docs):
-  #return sorted([(cosine_similarity(query.get_idf(), docs[d].get_title_tfs('norm'), docs[d].get_body_tfs('norm'), docs[d].get_anchor_tfs('norm')), d) for d in query.get_urls()])
-  return sorted([(cosine_similarity(query.get_idf(), docs[d].get_title_tfs('norm'), docs[d].get_body_tfs('norm'), docs[d].get_anchor_tfs('norm')), d) for d in docs])
+def find_current_window(body_hits_modified):
+   at_lists_end = True
+   all_hits = []
+   all_interior_hits = []
+   for i in range(len(body_hits_modified)):
+  (term,hits,position) = body_hits_modified[i]
+	all_hits.append(hits[position])
+	if position < len(hits) - 1:
+	   at_lists_end = False
+	   all_interior_hits.append((hits[position], i))
+   all_hits = sorted(all_hits)
+   all_interior_hits = sorted(all_interior_hits)
+   if all_interior_hits:
+	(min_hit,min_index) = all_interior_hits[0]
+   else:
+	min_index = None
+   return(at_lists_end,(all_hits[-1] - all_hits[0]) + 1,min_index)
+
+def find_smallest_window_size(d,docs,query):
+   body_hits = docs[d].get_body_hits()
+   if len(body_hits) != len(query.get_query().split()):
+	return None
+   #add integer to help track current position in hits array
+   body_hits_modified = [(key,body_hits[key],0) for key in body_hits.keys()]
+   smallest_window_size = None
+   at_lists_end = False
+   while(True):
+	(at_lists_end, current_window_size,min_index) = find_current_window(body_hits_modified)
+	if at_lists_end:
+	   break
+	if min_index is not None:
+	    (term,hits,position) = body_hits_modified[min_index]
+            body_hits_modified[min_index] = (term,hits,position + 1)
+	if smallest_window_size is None or smallest_window_size > current_window_size:
+	   smallest_window_size = current_window_size
+   return smallest_window_size
+
+def calculate_exponential_boost(smallest_window_size, query_terms):
+ if smallest_window_size is None:
+	return 1
+ elif smallest_window_size == len(query_terms):
+	return B
+ else:
+	return 1 + (B * (1/smallest_window_size))
+ 
+def smallest_window_boost(d,docs,query,include_window):
+ if not include_window: 
+	return 1
+ return calculate_exponential_boost(find_smallest_window_size(d,docs,query),query.get_query().split())
+
+def rank_cosine(query, docs, include_window):
+	return sorted([(cosine_similarity(query.get_idf(), docs[d].get_title_tfs('norm'), docs[d].get_body_tfs('norm'), docs[d].get_anchor_tfs('norm')) * smallest_window_boost(d,docs,query,include_window), d) for d in docs])
 
 def main(argv):
   load_globals(argv[2], argv[4])
